@@ -6,6 +6,6 @@ pub trait BluePrint {
    fn add_data       (&mut self, col_name: String, data: Types        )  -> Result<(), Errors>;
    fn select         (&self, col_name: String, data: Option<Types>    )  -> Result<(), Errors>;
    fn find_by_id     (&mut self, id: usize, col: String               )  -> Result<(), Errors>;
-   fn delete_data    (&mut self, col_name: String, data: Option<Types>)  -> Result<(), Errors>;
-   fn delete_column  (&mut self, col: Column                          )  -> Result<(), Errors>; 
+   fn delete_data    (&mut self, col_name: String, data: Types        )  -> Result<(), Errors>;
+   fn delete_column  (&mut self, col: String                          )  -> Result<(), Errors>; 
 }

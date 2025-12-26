@@ -112,11 +112,46 @@ impl BluePrint for Table {
       return Ok(());
    }
 
-   fn delete_column(&mut self, col: Column) -> Result<(), Errors> {
-      todo!()
+   fn delete_column(&mut self, col: String) -> Result<(), Errors> {
+      if self.table_name.is_empty() {
+         let error = format!("ERROR: COLUMN NOT FOUND");
+         return Err(Errors::ColumnNotFound(error));
+      }
+      
+      let (index, _) = self.cols.iter()
+         .enumerate().find(|(_, c)| *c.name == col).unwrap();
+
+      self.cols.remove(index);
+      Ok(())
+
    }
    
-   fn delete_data (&mut self, col_name: String, data: Option<Types>) -> Result<(), Errors> {
-      todo!()
+   fn delete_data (&mut self, col_name: String, data: Types) -> Result<(), Errors> {
+      let (index, _) = self.cols.iter()
+         .enumerate().find(|(_, c)| *c.name == col_name).unwrap();
+            
+      let column = self
+         .cols
+         .iter_mut()
+         .find(|c| c.name == col_name)
+         .ok_or_else(|| {
+               Errors::ColumnNotFound(format!("ERROR: COLUMN {:?} NOT FOUND", col_name))
+         })?;
+
+      if column.values.is_empty() {
+         return Err(Errors::IndexNotFound(format!("ERROR: COLUMN {:?} IS EMPTY", col_name)));
+      }
+      
+      if discriminant(&column.values[0]) == discriminant(&data) {
+         column.values.remove(index);
+         Ok(())
+      } else {
+         let expected_type = get_type_name(&column.values[0]);
+         let received_type = get_type_name(&data);
+         Err(Errors::TypeNotEqual(format!(
+               "ERROR: COLUMN {} ACCEPTS {}, TRIED TO PUSH {}",
+               col_name, expected_type, received_type
+         )))
+      }
    }
 }

@@ -43,10 +43,15 @@ fn main() -> Result<(), Errors>{
     println!();
     my_table.select(String::from("clients"), Some(Types::Text(String::from("Amanda"))))?;
     println!();
-    my_table.select(String::from("id"), Some(Types::Int(9000)))?;
+    //my_table.select(String::from("id"), Some(Types::Int(9000)))?;
 
     println!("\n=== Testando FIND_BY_ID ===\n");
     my_table.find_by_id(1, String::from("clients"))?;
+
+    println!("\n=== Testando DELETES ===");
+    my_table.delete_data(String::from("clients"), Types::Text(String::from("Amanda")))?;
+    my_table.delete_column(String::from("id"))?;
+
     println!("\n=== Tabela Completa ===");
     println!("{:#?}", my_table);
 
