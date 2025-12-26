@@ -2,6 +2,7 @@ mod errors;
 mod types;
 mod data_base;
 mod blueprint;
+mod tests;
 use errors::Errors;
 use types::{Types};
 
@@ -57,3 +58,4 @@ fn main() -> Result<(), Errors>{
 
     Ok(())
 }
+
