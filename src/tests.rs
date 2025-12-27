@@ -43,22 +43,37 @@ mod test {
    }
 
    #[test]
-   fn test_create_table() {
+   fn test_create_table() -> Result<(), Errors>{
       let my_table = Table::create(String::from("my_table"));
       let expect = Table::create(String::from("my_table"));
-
+      let table_name = match my_table.get_table_name() {
+         Ok(c) => {c},
+         Err(e) => {return Err(e);}
+      }; 
       assert_eq!(my_table, expect);
-      assert_eq!(my_table.table_name, "my_table");
+      assert_eq!(table_name, "my_table".to_string());
+      Ok(())
    }
 
    #[test]
-   fn test_create_table_with_different_names() {
+   fn test_create_table_with_different_names() -> Result<(), Errors>{
       let table1 = Table::create(String::from("users"));
       let table2 = Table::create(String::from("products"));
 
+      let table1_name = match table1.get_table_name() {
+         Ok(c) => {c},
+         Err(e) => {return Err(e);}
+      };
+
+      let table2_name = match table1.get_table_name() {
+         Ok(c) => {c},
+         Err(e) => {return Err(e);}
+      };
+
       assert_ne!(table1, table2);
-      assert_eq!(table1.table_name, "users");
-      assert_eq!(table2.table_name, "products");
+      assert_eq!(table1_name, "users".to_string());
+      assert_eq!(table2_name, "products".to_string());
+      Ok(())
    }
 
    #[test]
@@ -70,8 +85,13 @@ mod test {
          values: Vec::new(),
       })?;
 
-      assert_eq!(table.cols.len(), 1);
-      assert_eq!(table.cols[0].name, "id");
+      let table_cols = match table.get_table_columns() {
+         Ok(c) => {c},
+         Err(e) => {return Err(e);}
+      };
+
+      assert_eq!(table_cols.len(), 1);
+      assert_eq!(table_cols[0].name, "id");
 
       Ok(())
    }
@@ -90,9 +110,14 @@ mod test {
          values: Vec::new(),
       })?;
 
-      assert_eq!(table.cols.len(), 2);
-      assert_eq!(table.cols[0].name, "id");
-      assert_eq!(table.cols[1].name, "clients");
+      let table_cols = match table.get_table_columns() {
+         Ok(c) => {c},
+         Err(e) => {return Err(e);}
+      };
+
+      assert_eq!(table_cols.len(), 2);
+      assert_eq!(table_cols[0].name, "id");
+      assert_eq!(table_cols[1].name, "clients");
 
       Ok(())
    }
@@ -116,8 +141,13 @@ mod test {
       table.add_data(String::from("id"), Types::Int(2))?;
       table.add_data(String::from("id"), Types::Int(3))?;
 
+      let table_cols = match table.get_table_columns() {
+         Ok(c) => {c},
+         Err(e) => {return Err(e);}
+      };
+
       // Verificar se os dados foram adicionados
-      let id_column = table.cols.iter()
+      let id_column = table_cols.iter()
          .find(|c| c.name == "id")
          .expect("Coluna 'id' não encontrada");
       
@@ -135,7 +165,7 @@ mod test {
          table.add_data(String::from("clients"), Types::Text(client))?;
       }
 
-      let clients_column = table.cols.iter()
+      let clients_column = table_cols.iter()
          .find(|c| c.name == "clients")
          .expect("Coluna 'clients' não encontrada");
       
@@ -156,15 +186,18 @@ mod test {
    #[test]
    fn test_select_all_from_column() -> Result<(), Errors> {
       let table = setup_table_with_data()?;
+      
+      let table_cols = match table.get_table_columns() {
+         Ok(c) => {c},
+         Err(e) => {return Err(e);}
+      };
 
-      // Verificar que a coluna tem dados antes do select
-      let id_column = table.cols.iter()
+      let id_column = table_cols.iter()
          .find(|c| c.name == "id")
          .expect("Coluna 'id' não encontrada");
       
       assert_eq!(id_column.values.len(), 3, "Deveria ter 3 registros de ID");
 
-      // SELECT deve executar sem erros (imprime automaticamente)
       table.select(String::from("id"), None)?;
 
       Ok(())
@@ -173,9 +206,12 @@ mod test {
    #[test]
    fn test_select_with_filter() -> Result<(), Errors> {
       let table = setup_table_with_data()?;
-
+      let table_cols = match table.get_table_columns() {
+         Ok(c) => {c},
+         Err(e) => {return Err(e);}
+      };
       // Verificar que o valor existe na coluna
-      let clients_column = table.cols.iter()
+      let clients_column = table_cols.iter()
          .find(|c| c.name == "clients")
          .expect("Coluna 'clients' não encontrada");
 
@@ -205,9 +241,12 @@ mod test {
    #[test]
    fn test_delete_data() -> Result<(), Errors> {
       let mut table = setup_table_with_data()?;
-
+      let table_cols = match table.get_table_columns() {
+         Ok(c) => {c},
+         Err(e) => {return Err(e);}
+      };
       // Contar registros antes da exclusão
-      let clients_column = table.cols.iter()
+      let clients_column = table_cols.iter()
          .find(|c| c.name == "clients")
          .expect("Coluna 'clients' não encontrada");
       let count_before = clients_column.values.len();
@@ -219,7 +258,7 @@ mod test {
       )?;
 
       // Verificar que foi deletado
-      let clients_column = table.cols.iter()
+      let clients_column = table_cols.iter()
          .find(|c| c.name == "clients")
          .expect("Coluna 'clients' não encontrada");
       let count_after = clients_column.values.len();
@@ -254,15 +293,22 @@ mod test {
    #[test]
    fn test_delete_column() -> Result<(), Errors> {
       let mut table = setup_table_with_data()?;
-
-      let columns_before = table.cols.len();
+      let table_cols = match table.get_table_columns() {
+         Ok(c) => {c},
+         Err(e) => {return Err(e);}
+      };
+      let columns_before = table_cols.len();
 
       table.delete_column(String::from("id"))?;
 
-      assert_eq!(table.cols.len(), columns_before - 1, "Deveria ter uma coluna a menos");
+      assert_eq!(table_cols.len(), columns_before - 1, "Deveria ter uma coluna a menos");
 
       // Verificar que a coluna não existe mais
-      let id_column_exists = table.cols.iter().any(|c| c.name == "id");
+      let table_cols = match table.get_table_columns() {
+         Ok(c) => {c},
+         Err(e) => {return Err(e);}
+      };
+      let id_column_exists = table_cols.iter().any(|c| c.name == "id");
       assert!(!id_column_exists, "Coluna 'id' não deveria mais existir");
 
       Ok(())
@@ -283,8 +329,13 @@ mod test {
 
       table.delete_column(String::from("id"))?;
       table.delete_column(String::from("clients"))?;
+      
+      let table_cols = match table.get_table_columns() {
+         Ok(c) => {c},
+         Err(e) => {return Err(e);}
+      };
 
-      assert_eq!(table.cols.len(), 0, "Não deveria ter nenhuma coluna");
+      assert_eq!(table_cols.len(), 0, "Não deveria ter nenhuma coluna");
 
       Ok(())
    }
@@ -293,7 +344,6 @@ mod test {
    fn test_empty_table_operations() -> Result<(), Errors> {
       let mut table = setup_empty_table();
 
-      // Testar operações em tabela vazia
       let select_result = table.select(String::from("any_column"), None);
       assert!(select_result.is_err(), "SELECT em tabela vazia deveria falhar");
 
@@ -302,7 +352,4 @@ mod test {
 
       Ok(())
    }
-
-   // Teste de integração completo
-
 }

@@ -13,5 +13,7 @@ pub enum Errors {
    ColumnNotFound  (String),
 
    #[allow(dead_code)]
-   IndexOutOfBounds(String)
+   IndexOutOfBounds(String),
+
+   InvalidJoinOperation
 }

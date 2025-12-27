@@ -1,7 +1,7 @@
 use std::mem::discriminant;
 
 use crate::blueprint::BluePrint;
-use crate::errors::Errors;
+use crate::errors::{self, Errors};
 use crate::types::{Types, get_type_name};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -11,12 +11,26 @@ pub struct Column {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Table {
-   pub table_name: String,
-   pub cols: Vec<Column>,
+pub struct Table{
+   table_name: String,
+   cols: Vec<Column>,
 }
 
 impl BluePrint for Table {
+   fn get_table_name(&self) -> Result<String, Errors> {
+      if self.table_name.is_empty(){
+         return Err(Errors::TableNotFound(format!("TABLE NOT FOUND")));
+      }
+      return Ok(self.table_name.to_owned());
+   }
+   
+   fn get_table_columns(&self) -> Result<Vec<Column>, Errors> {
+      if self.table_name.is_empty(){
+         return Err(Errors::TableNotFound(format!("TABLE NOT FOUND")));
+      }
+      return Ok(self.cols.to_owned());
+   }
+
    fn create(table_name: String) -> Self {
       Self {
          table_name,
@@ -24,11 +38,12 @@ impl BluePrint for Table {
       }
    }
 
-   fn add_column(&mut self, col: Column) -> Result<String, Errors> {
+   fn add_column(&mut self, col_name: String) -> Result<String, Errors> {
       if self.table_name.is_empty() {
          let error = format!("ERROR: TABLE NOT FOUND");
          return Err(Errors::TableNotFound(error));
       }
+      let col = Column { name: col_name, values: Vec::new() };
       let success = format!("{} IS CREATED", col.name);
       self.cols.push(col);
       Ok(success)
@@ -163,4 +178,31 @@ impl BluePrint for Table {
          )))
       }
    }
+
+   fn contains_column(&self, col_name: String) -> Result<Column, Errors>{
+      let option_col = &self.cols.iter()
+                        .find(|c| *c.name == col_name).to_owned();
+      
+      match option_col {
+         Some(col) => {return Ok(col.to_owned().to_owned())}
+         None => {return Err(Errors::ColumnNotFound(format!("COLUMN NOT FOUND")));}
+      }
+   }
+   fn join_table<T: BluePrint>(&mut self, cols: &[String], table: T) -> Result<String, Errors> {
+      let [col_a_name, col_b_name] = cols else {
+         return Err(Errors::InvalidJoinOperation);
+      };
+      
+      let col_a = self.contains_column(col_a_name.to_owned())?;
+      let col_b = table.contains_column(col_b_name.to_owned())?;
+      
+      Ok(format!(
+         "{} : {}\n{}\n{:?} : \n{:?}",
+         col_a.name, 
+         col_b.name, 
+         "-".repeat(12),
+         col_a.values, 
+         col_b.values
+      ))
+}
 }
