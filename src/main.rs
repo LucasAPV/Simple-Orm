@@ -2,7 +2,6 @@ mod errors;
 mod types;
 mod data_base;
 mod blueprint;
-mod tests;
 use errors::Errors;
 
 use crate::{blueprint::BluePrint, data_base::Table, types::Types};

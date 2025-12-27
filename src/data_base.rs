@@ -1,7 +1,7 @@
 use std::mem::discriminant;
 
 use crate::blueprint::BluePrint;
-use crate::errors::{self, Errors};
+use crate::errors::Errors;
 use crate::types::{Types, get_type_name};
 
 #[derive(Clone, Debug, PartialEq)]
