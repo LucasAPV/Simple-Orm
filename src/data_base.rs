@@ -1,5 +1,4 @@
 use std::mem::discriminant;
-
 use crate::blueprint::BluePrint;
 use crate::errors::Errors;
 use crate::types::{Types, get_type_name};
@@ -91,7 +90,7 @@ impl BluePrint for Table {
                      return Err(Errors::IndexOutOfBounds(error));
                   }
                } else {
-                  return Err(Errors::ColumnNotFound(format!("COLUMN NOT FOUND")))
+                  return Err(Errors::ColumnNotFound(format!("COLUMN {} NOT FOUND", col_name)))
                }
          }
 
@@ -185,10 +184,10 @@ impl BluePrint for Table {
       
       match option_col {
          Some(col) => {return Ok(col.to_owned().to_owned())}
-         None => {return Err(Errors::ColumnNotFound(format!("COLUMN NOT FOUND")));}
+         None => {return Err(Errors::ColumnNotFound(format!("COLUMN {} NOT FOUND", col_name)));}
       }
    }
-   fn join_table<T: BluePrint>(&mut self, cols: &[String], table: T) -> Result<String, Errors> {
+   fn join_table<T: BluePrint>(&mut self, cols: &[String], table: T) -> Result<Table, Errors> {
       let [col_a_name, col_b_name] = cols else {
          return Err(Errors::InvalidJoinOperation);
       };
@@ -196,13 +195,17 @@ impl BluePrint for Table {
       let col_a = self.contains_column(col_a_name.to_owned())?;
       let col_b = table.contains_column(col_b_name.to_owned())?;
       
-      Ok(format!(
-         "{} : {}\n{}\n{:?} : \n{:?}",
-         col_a.name, 
-         col_b.name, 
-         "-".repeat(12),
-         col_a.values, 
-         col_b.values
-      ))
-}
+      let mut ret_table = Table::create(format!("{}_{}", col_a_name, col_b_name));
+      ret_table.add_column_by_column(col_a)?;
+      ret_table.add_column_by_column(col_b)?;
+      Ok(ret_table)
+   }
+
+   fn add_column_by_column(&mut self, col: Column) -> Result<(), Errors>{
+      if col.name.is_empty() {
+         return Err(Errors::ColumnNotFound(format!("COLUMN NOT FOUND")));
+      }
+      self.cols.push(col);
+      Ok(())
+   }
 }

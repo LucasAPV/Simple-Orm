@@ -29,11 +29,11 @@ fn main() -> Result<(), Errors>{
     ];
 
     for i in 0..=2{
-        clients.add_data(String::from("id"), Types::Int(i))?;
+        clients.add_data(String::from("id"), Types::Int(i+1))?;
     }
 
     for i in 0..=2{
-        clients.add_data(String::from("product_id"), Types::Int(i))?;
+        clients.add_data(String::from("product_id"), Types::Int(i+1))?;
     }
 
     for i in 0..=2{
@@ -41,17 +41,22 @@ fn main() -> Result<(), Errors>{
     }
 
     for i in 0..=2{
-        products.add_data(String::from("id"), Types::Int(i))?;
+        products.add_data(String::from("id"), Types::Int(i+1))?;
     }
 
     for i in 0..=2{
         products.add_data(String::from("name"), Types::Text(prods[i].clone()))?;
     }
     
-    let output = clients
+    let mut joined_table = clients
             .join_table(&[String::from("product_id"), String::from("name")], products)?;
+    let product_id = joined_table.select(String::from("product_id"), None)?;
+    let name = joined_table.select(String::from("name"), None)?;
+    println!("{name}");
+    println!("{product_id}");
 
-    println!("{output}");
+    let found = joined_table.find_by_id(2, String::from("name"))?;
+    println!("{found}");
     Ok(())
 }
 
