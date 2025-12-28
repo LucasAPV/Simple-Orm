@@ -108,11 +108,11 @@ impl BluePrint for Table {
       }
    }
 
-   fn find_by_id(&mut self, id: usize, col: String) -> Result<String, Errors> {
+   fn find_by_id(&mut self, id: usize, col_name: String) -> Result<String, Errors> {
       let mut res = String::new();
       
       if let Some(column) = self.cols.iter()
-         .find(|c| c.name == col) {
+         .find(|c| c.name == col_name) {
             if self.cols.len() < id {
                   let error = format!("ID {id} IS OUT OF BOUNDS");
                   return Err(Errors::IndexOutOfBounds(error));
@@ -125,27 +125,27 @@ impl BluePrint for Table {
             let ap = format!("{:?}", column.values[id - 1]); 
             res.push_str(ap.as_str());
          } else {
-            let error = format!("COLUMN {col} NOT FOUND");
+            let error = format!("COLUMN {col_name} NOT FOUND");
             return Err(Errors::ColumnNotFound(error));
          }
 
       return Ok(res);
    }
 
-   fn delete_column(&mut self, col: String) -> Result<String, Errors> {
+   fn delete_column(&mut self, col_name: String) -> Result<String, Errors> {
       if self.table_name.is_empty() {
          let error = format!("ERROR: COLUMN NOT FOUND");
          return Err(Errors::ColumnNotFound(error));
       }
       
       let index = match self.cols.iter()
-         .enumerate().find(|(_, c)| *c.name == col){
+         .enumerate().find(|(_, c)| *c.name == col_name){
             Some((index, _)) => index,
             None => { return Err(Errors::TableNotFound(format!("TABLE NOT FOUND")))}
          };
 
       self.cols.remove(index);
-      Ok(format!("{} REMOVED", col))
+      Ok(format!("{} REMOVED", col_name))
 
    }
    
@@ -187,25 +187,24 @@ impl BluePrint for Table {
          None => {return Err(Errors::ColumnNotFound(format!("COLUMN {} NOT FOUND", col_name)));}
       }
    }
-   fn join_table<T: BluePrint>(&mut self, cols: &[String], table: T) -> Result<Table, Errors> {
-      let [col_a_name, col_b_name] = cols else {
+
+   fn join_table<T: BluePrint>(&mut self, cols_name: &[String], table: T) -> Result<Table, Errors> {
+      let [col_a_name, col_b_name] = cols_name else {
          return Err(Errors::InvalidJoinOperation);
       };
       
-      let col_a = self.contains_column(col_a_name.to_owned())?;
-      let col_b = table.contains_column(col_b_name.to_owned())?;
-      
-      let mut ret_table = Table::create(format!("{}_{}", col_a_name, col_b_name));
-      ret_table.add_column_by_column(col_a)?;
-      ret_table.add_column_by_column(col_b)?;
-      Ok(ret_table)
-   }
+      let mut col_a = self.contains_column(col_a_name.to_owned())?;
+      col_a.name = format!("{}.{}", col_a_name, self.get_table_name()?);
 
-   fn add_column_by_column(&mut self, col: Column) -> Result<(), Errors>{
-      if col.name.is_empty() {
-         return Err(Errors::ColumnNotFound(format!("COLUMN NOT FOUND")));
-      }
-      self.cols.push(col);
-      Ok(())
+      let mut col_b = table.contains_column(col_b_name.to_owned())?;
+      col_b.name = format!("{}.{}", col_b_name, table.get_table_name()?);
+
+      let ret_table = Table { 
+            table_name: format!("{}_{}", &self.table_name, table.get_table_name()?),
+            cols: vec![col_a, col_b]
+      };
+
+      println!("{}",ret_table.table_name);
+      Ok(ret_table)
    }
 }

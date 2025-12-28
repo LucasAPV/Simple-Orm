@@ -48,14 +48,15 @@ fn main() -> Result<(), Errors>{
         products.add_data(String::from("name"), Types::Text(prods[i].clone()))?;
     }
     
-    let mut joined_table = clients
-            .join_table(&[String::from("product_id"), String::from("name")], products)?;
-    let product_id = joined_table.select(String::from("product_id"), None)?;
-    let name = joined_table.select(String::from("name"), None)?;
-    println!("{name}");
-    println!("{product_id}");
+    let mut joined_table = 
+            clients.join_table(&[String::from("name"), String::from("name")], products)?;
+    
+    let name_clients =  joined_table.select(String::from("name.clients"), None)?;
+    let name_products = joined_table.select(String::from("name.products"), None)?;
+    println!("{name_clients}");
+    println!("{name_products}");
 
-    let found = joined_table.find_by_id(2, String::from("name"))?;
+    let found = joined_table.find_by_id(2, String::from("name.clients"))?;
     println!("{found}");
     Ok(())
 }
