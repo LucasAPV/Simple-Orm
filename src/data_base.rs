@@ -2,7 +2,7 @@ use std::mem::discriminant;
 use crate::blueprint::BluePrint;
 use crate::errors::Errors;
 use crate::types::{Types, get_type_name};
-
+use crate::query_builder::Query;
 #[derive(Clone, Debug, PartialEq)]
 pub struct Column {
    pub name: String,
@@ -11,30 +11,40 @@ pub struct Column {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Table{
+   query: Query,
    table_name: String,
    cols: Vec<Column>,
 }
 
 impl BluePrint for Table {
-   fn get_table_name(&self) -> Result<String, Errors> {
-      if self.table_name.is_empty(){
-         return Err(Errors::TableNotFound(format!("TABLE NOT FOUND")));
-      }
-      return Ok(self.table_name.to_owned());
-   }
-   
-   fn get_table_columns(&self) -> Result<Vec<Column>, Errors> {
-      if self.table_name.is_empty(){
-         return Err(Errors::TableNotFound(format!("TABLE NOT FOUND")));
-      }
-      return Ok(self.cols.to_owned());
-   }
-
    fn create(table_name: String) -> Self {
       Self {
          table_name,
          cols: Vec::new(),
+         query: Query::initialize_query()
       }
+   }
+
+   fn get_query(&self) -> Result<Query, Errors>{
+      Ok(self.query.clone())
+   }
+
+   fn get_table_name(&mut self) -> Result<String, Errors> {
+      if self.table_name.is_empty(){
+         return Err(Errors::TableNotFound(format!("TABLE NOT FOUND")));
+      }
+
+      self.query.append(format!("SELECT {} FROM INFORMATION_SCHEMA.TABLES;\n", self.table_name));
+      return Ok(self.table_name.to_owned());
+   }
+   
+   fn get_table_columns(&mut self) -> Result<Vec<Column>, Errors> {
+      if self.table_name.is_empty(){
+         return Err(Errors::TableNotFound(format!("TABLE NOT FOUND")));
+      }
+
+      self.query.append(format!("SELECT * FROM {};\n", self.table_name));
+      return Ok(self.cols.to_owned());
    }
 
    fn add_column(&mut self, col_name: String) -> Result<String, Errors> {
@@ -42,9 +52,10 @@ impl BluePrint for Table {
          let error = format!("ERROR: TABLE NOT FOUND");
          return Err(Errors::TableNotFound(error));
       }
-      let col = Column { name: col_name, values: Vec::new() };
+      let col = Column { name: col_name.clone(), values: Vec::new() };
       let success = format!("{} IS CREATED", col.name);
       self.cols.push(col);
+      self.query.append(format!("ALTER TABLE {} ADD {};\n", self.table_name, col_name));
       Ok(success)
    }
 
@@ -58,14 +69,26 @@ impl BluePrint for Table {
          })?;
 
       if column.values.is_empty() {
-         column.values.push(data);
+         column.values.push(data.clone());
          let success = format!("DATA ADDED");
+         
+         self.query.append(format!(
+            "INSERT INTO {} ({}) VALUES ({:?});\n", 
+            self.table_name, col_name, data
+         ));
+
          return Ok(success);
       }
 
       if discriminant(&column.values[0]) == discriminant(&data) {
-         column.values.push(data);
+         column.values.push(data.clone());
          let success = format!("DATA ADDED");
+         
+         self.query.append(format!(
+            "INSERT INTO {} ({}) VALUES ({:?});\n", 
+            self.table_name, col_name, data
+         ));
+
          return Ok(success);      
       } else {
          let expected_type = get_type_name(&column.values[0]);
@@ -77,13 +100,17 @@ impl BluePrint for Table {
       }
    }
 
-   fn select(&self, col_name: String, data: Option<Types>) -> Result<String, Errors> {
-      match data {
+   fn select(&mut self, col_name: String, data: Option<Types>) -> Result<String, Errors> {
+      match data.clone() {
          Some(value) => {
                if let Some(column) = self.cols.iter()
                .find(|c| c.name == col_name) {
                   if let Some(found) = column.values.iter().find(|&v| v == &value) {
                      let res = format!("'{}': \n\t{:?}", col_name, found);
+                     self.query.append(format!(
+                        "SELECT {:?} FROM {};\n", 
+                           data.unwrap(), self.table_name
+                     ));
                      return Ok(res);
                   } else {
                      let error = format!("INDEX {:?} IS OUT OF BOUNDS IN {}", value, col_name);
@@ -100,6 +127,10 @@ impl BluePrint for Table {
                   for (idx, value) in column.values.iter().enumerate() {
                      res.push_str(format!("   [{}] {:?}", idx + 1, value).as_str());   
                   }
+                  self.query.append(format!(
+                        "SELECT * FROM {};\n", 
+                           self.table_name
+                     ));
                   return Ok(res);
                }else {
                   return Err(Errors::TableNotFound(format!("TABLE NOT FOUND")))
@@ -128,7 +159,10 @@ impl BluePrint for Table {
             let error = format!("COLUMN {col_name} NOT FOUND");
             return Err(Errors::ColumnNotFound(error));
          }
-
+         self.query.append(format!(
+            "SELECT * FROM {} WHERE {}.id = {};\n", 
+            col_name, col_name, id
+         ));
       return Ok(res);
    }
 
@@ -145,6 +179,10 @@ impl BluePrint for Table {
          };
 
       self.cols.remove(index);
+      self.query.append(format!(
+         "ALTER TABLE {} DROP COLUMN {};\n", 
+         self.table_name, col_name
+      ));
       Ok(format!("{} REMOVED", col_name))
 
    }
@@ -167,6 +205,12 @@ impl BluePrint for Table {
       
       if discriminant(&column.values[0]) == discriminant(&data) {
          column.values.remove(index);
+         
+         self.query.append(format!(
+            "DELETE FROM {} WHERE {:?} == {:?};\n", 
+            col_name, data, data
+         ));
+
          Ok(format!("{:?} REMOVED FROM {} COLUMN", data, col_name))
       } else {
          let expected_type = get_type_name(&column.values[0]);
@@ -178,7 +222,7 @@ impl BluePrint for Table {
       }
    }
 
-   fn contains_column(&self, col_name: String) -> Result<Column, Errors>{
+   fn contains_column(&mut self, col_name: String) -> Result<Column, Errors>{
       let option_col = &self.cols.iter()
                         .find(|c| *c.name == col_name).to_owned();
       
@@ -188,7 +232,7 @@ impl BluePrint for Table {
       }
    }
 
-   fn join_table<T: BluePrint>(&mut self, cols_name: &[String], table: T) -> Result<Table, Errors> {
+   fn join_table<T: BluePrint>(&mut self, cols_name: &[String], mut table: T) -> Result<Table, Errors> {
       let [col_a_name, col_b_name] = cols_name else {
          return Err(Errors::InvalidJoinOperation);
       };
@@ -201,10 +245,13 @@ impl BluePrint for Table {
 
       let ret_table = Table { 
             table_name: format!("{}_{}", &self.table_name, table.get_table_name()?),
-            cols: vec![col_a, col_b]
+            cols: vec![col_a, col_b],
+            query: Query::initialize_query()
       };
-
-      println!("{}",ret_table.table_name);
+      self.query.append(format!(
+         "SELECT {}, {} FROM {} INNER JOIN {};\n", 
+         col_a_name, col_b_name, self.table_name, table.get_table_name()?
+      ));
       Ok(ret_table)
    }
 }

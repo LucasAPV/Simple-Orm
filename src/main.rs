@@ -2,6 +2,7 @@ mod errors;
 mod types;
 mod data_base;
 mod blueprint;
+mod query_builder;
 use errors::Errors;
 
 use crate::{blueprint::BluePrint, data_base::Table, types::Types};
@@ -48,16 +49,23 @@ fn main() -> Result<(), Errors>{
         products.add_data(String::from("name"), Types::Text(prods[i].clone()))?;
     }
     
-    let mut joined_table = 
-            clients.join_table(&[String::from("name"), String::from("name")], products)?;
+    // let mut joined_table = 
+    //         clients.join_table(&[String::from("name"), String::from("name")], products)?;
     
-    let name_clients =  joined_table.select(String::from("name.clients"), None)?;
-    let name_products = joined_table.select(String::from("name.products"), None)?;
-    println!("{name_clients}");
-    println!("{name_products}");
+    // let name_clients =  joined_table.select(String::from("name.clients"), None)?;
+    // let name_products = joined_table.select(String::from("name.products"), None)?;
+    // println!("{name_clients}");
+    // println!("{name_products}");
 
-    let found = joined_table.find_by_id(2, String::from("name.clients"))?;
-    println!("{found}");
+    // let found = joined_table.find_by_id(2, String::from("name.clients"))?;
+    // println!("{found}");
+
+    let clients_query = clients.get_query()?; 
+    let products_query = products.get_query()?; 
+    
+    println!("{}", clients_query.show_query());
+    println!("{}",format!("-").repeat(20));
+    println!("{}", products_query.show_query());
     Ok(())
 }
 
