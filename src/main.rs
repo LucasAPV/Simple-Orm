@@ -64,7 +64,8 @@ fn main() -> Result<(), Errors>{
     let products_query = products.get_query()?; 
     
     println!("{}", clients_query.show_query());
-    println!("{}",format!("-").repeat(20));
+    println!("{}",format!("-").repeat(70));
+    println!();
     println!("{}", products_query.show_query());
     Ok(())
 }

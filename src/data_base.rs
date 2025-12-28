@@ -34,7 +34,7 @@ impl BluePrint for Table {
          return Err(Errors::TableNotFound(format!("TABLE NOT FOUND")));
       }
 
-      self.query.append(format!("SELECT {} FROM INFORMATION_SCHEMA.TABLES;\n", self.table_name));
+      self.query.append_select_table_name(self.table_name.clone());
       return Ok(self.table_name.to_owned());
    }
    
@@ -43,7 +43,7 @@ impl BluePrint for Table {
          return Err(Errors::TableNotFound(format!("TABLE NOT FOUND")));
       }
 
-      self.query.append(format!("SELECT * FROM {};\n", self.table_name));
+      self.query.append_select_table_columns(self.table_name.clone());
       return Ok(self.cols.to_owned());
    }
 
@@ -55,7 +55,7 @@ impl BluePrint for Table {
       let col = Column { name: col_name.clone(), values: Vec::new() };
       let success = format!("{} IS CREATED", col.name);
       self.cols.push(col);
-      self.query.append(format!("ALTER TABLE {} ADD {};\n", self.table_name, col_name));
+      self.query.append_add_column(self.table_name.clone(), col_name);
       Ok(success)
    }
 
@@ -72,10 +72,9 @@ impl BluePrint for Table {
          column.values.push(data.clone());
          let success = format!("DATA ADDED");
          
-         self.query.append(format!(
-            "INSERT INTO {} ({}) VALUES ({:?});\n", 
-            self.table_name, col_name, data
-         ));
+         self.query.append_add_data_to_column( 
+            self.table_name.clone(), col_name, data.clone()
+         );
 
          return Ok(success);
       }
@@ -84,10 +83,9 @@ impl BluePrint for Table {
          column.values.push(data.clone());
          let success = format!("DATA ADDED");
          
-         self.query.append(format!(
-            "INSERT INTO {} ({}) VALUES ({:?});\n", 
-            self.table_name, col_name, data
-         ));
+         self.query.append_add_data_to_column( 
+            self.table_name.clone(), col_name, data.clone()
+         );
 
          return Ok(success);      
       } else {
@@ -107,10 +105,7 @@ impl BluePrint for Table {
                .find(|c| c.name == col_name) {
                   if let Some(found) = column.values.iter().find(|&v| v == &value) {
                      let res = format!("'{}': \n\t{:?}", col_name, found);
-                     self.query.append(format!(
-                        "SELECT {:?} FROM {};\n", 
-                           data.unwrap(), self.table_name
-                     ));
+                     self.query.append_select(data, self.table_name.clone());
                      return Ok(res);
                   } else {
                      let error = format!("INDEX {:?} IS OUT OF BOUNDS IN {}", value, col_name);
@@ -127,10 +122,7 @@ impl BluePrint for Table {
                   for (idx, value) in column.values.iter().enumerate() {
                      res.push_str(format!("   [{}] {:?}", idx + 1, value).as_str());   
                   }
-                  self.query.append(format!(
-                        "SELECT * FROM {};\n", 
-                           self.table_name
-                     ));
+                  self.query.append_select(None, self.table_name.clone());
                   return Ok(res);
                }else {
                   return Err(Errors::TableNotFound(format!("TABLE NOT FOUND")))
@@ -159,10 +151,7 @@ impl BluePrint for Table {
             let error = format!("COLUMN {col_name} NOT FOUND");
             return Err(Errors::ColumnNotFound(error));
          }
-         self.query.append(format!(
-            "SELECT * FROM {} WHERE {}.id = {};\n", 
-            col_name, col_name, id
-         ));
+         self.query.append_find_by_id(col_name, id);
       return Ok(res);
    }
 
@@ -179,10 +168,7 @@ impl BluePrint for Table {
          };
 
       self.cols.remove(index);
-      self.query.append(format!(
-         "ALTER TABLE {} DROP COLUMN {};\n", 
-         self.table_name, col_name
-      ));
+      self.query.append_delete_column(self.table_name.clone(), col_name.clone());
       Ok(format!("{} REMOVED", col_name))
 
    }
@@ -206,10 +192,7 @@ impl BluePrint for Table {
       if discriminant(&column.values[0]) == discriminant(&data) {
          column.values.remove(index);
          
-         self.query.append(format!(
-            "DELETE FROM {} WHERE {:?} == {:?};\n", 
-            col_name, data, data
-         ));
+         self.query.append_delete_column_data(col_name.clone(), data.clone());
 
          Ok(format!("{:?} REMOVED FROM {} COLUMN", data, col_name))
       } else {
@@ -248,10 +231,10 @@ impl BluePrint for Table {
             cols: vec![col_a, col_b],
             query: Query::initialize_query()
       };
-      self.query.append(format!(
-         "SELECT {}, {} FROM {} INNER JOIN {};\n", 
-         col_a_name, col_b_name, self.table_name, table.get_table_name()?
-      ));
+      self.query.append_join_table(
+         col_a_name.clone(), col_b_name.clone(), 
+         self.table_name.clone(), table.get_table_name()?
+      );
       Ok(ret_table)
    }
 }
