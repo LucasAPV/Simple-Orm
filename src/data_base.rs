@@ -18,10 +18,12 @@ pub struct Table{
 
 impl BluePrint for Table {
    fn create(table_name: String) -> Self {
+   let mut query = Query::initialize_query();
+   query.append_add_table(table_name.clone());
       Self {
          table_name,
          cols: Vec::new(),
-         query: Query::initialize_query()
+         query: query
       }
    }
 

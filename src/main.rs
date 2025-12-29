@@ -3,70 +3,51 @@ mod types;
 mod data_base;
 mod blueprint;
 mod query_builder;
-use errors::Errors;
+mod migration;
+mod environment;
+use migration::Migration;
+use crate::{blueprint::BluePrint, data_base::Table, environment::Env};
 
-use crate::{blueprint::BluePrint, data_base::Table, types::Types};
-fn main() -> Result<(), Errors>{
+#[tokio::main]
+async fn main() -> Result<(), sqlx::Error>{
+    let clients= Table::create("clients".to_string());
+    let products = Table::create("products".to_string());
+
+    //Queries to the tables
+    let clients_query = clients.get_query().unwrap(); 
+    let products_query = products.get_query().unwrap();
     
-    let mut clients= Table::create("clients".to_string());
-    clients.add_column("id".to_string())?;
-    clients.add_column("name".to_string())?;
-    clients.add_column("product_id".to_string())?;
-
-    let mut products = Table::create("products".to_string());
-    products.add_column("id".to_string())?;
-    products.add_column("name".to_string())?;
-
-    let prods = vec![
-        String::from("prod1"),
-        String::from("prod2"),
-        String::from("prod3"),
-    ];
-
-    let clt = vec![
-        String::from("clt1"),
-        String::from("clt2"),
-        String::from("clt3"),
-    ];
-
-    for i in 0..=2{
-        clients.add_data(String::from("id"), Types::Int(i+1))?;
-    }
-
-    for i in 0..=2{
-        clients.add_data(String::from("product_id"), Types::Int(i+1))?;
-    }
-
-    for i in 0..=2{
-        clients.add_data(String::from("name"), Types::Text(clt[i].clone()))?;
-    }
-
-    for i in 0..=2{
-        products.add_data(String::from("id"), Types::Int(i+1))?;
-    }
-
-    for i in 0..=2{
-        products.add_data(String::from("name"), Types::Text(prods[i].clone()))?;
-    }
+    let db_type = String::from("MySQL");
+    let db_port = String::from("127.0.0.1:3306");
+    let us_name = String::from("root");
+    let db_pass = String::from("root");
+    let db_name = String::from("test");
     
-    // let mut joined_table = 
-    //         clients.join_table(&[String::from("name"), String::from("name")], products)?;
-    
-    // let name_clients =  joined_table.select(String::from("name.clients"), None)?;
-    // let name_products = joined_table.select(String::from("name.products"), None)?;
-    // println!("{name_clients}");
-    // println!("{name_products}");
+    //Environment for the data_base
+    let env = Env
+        ::create(
+            db_type, 
+            db_port, 
+            db_name, 
+            db_pass,
+            us_name);
 
-    // let found = joined_table.find_by_id(2, String::from("name.clients"))?;
-    // println!("{found}");
+    println!("Foi para a criacao da mg_clients");
+    //Migration of the clients table
+    let mut mg_clients = Migration::create(clients_query, env.clone());
+    println!("Saiu da criacao da mg_clients");
+    println!("Foi para a conexao");
+    mg_clients.connect().await?;
+    println!("Saiu da conexao");
+    println!("Foi para a query");
+    mg_clients.query().await?;
+    println!("Saiu da query");
 
-    let clients_query = clients.get_query()?; 
-    let products_query = products.get_query()?; 
+    //Migration of the products table
+    let mut mg_products = Migration::create(products_query, env);
+    mg_products.connect().await?;
+    mg_products.query().await?;
     
-    println!("{}", clients_query.show_query());
-    println!("{}",format!("-").repeat(70));
-    println!();
-    println!("{}", products_query.show_query());
     Ok(())
 }
 

@@ -1,5 +1,6 @@
 use crate::{data_base::{Column, Table}, errors::Errors, query_builder::Query, types::Types};
 
+#[allow(dead_code)]
 pub trait BluePrint {
    fn create                  (table_name: String                              ) -> Self;
    fn get_table_name          (&mut self                                       ) -> Result<String, Errors>; 

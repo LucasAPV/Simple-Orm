@@ -1,23 +1,17 @@
 #[derive(Debug, PartialEq, Clone)]
+#[allow(dead_code)]
+
 pub enum Types {
    Int(i32),
-   #[allow(dead_code)]
    BigInt(i64),
-
-   #[allow(dead_code)]
    Usize(usize),
-
-   #[allow(dead_code)]
    Real(f64),
-
-   #[allow(dead_code)]
    Bool(bool),
    Text(String),
-
-   #[allow(dead_code)]
    Null,
 }
 
+#[allow(dead_code)]
 pub fn get_type_name(value: &Types) -> &'static str {
    match value {
       Types::BigInt(_) => "BIGINT",

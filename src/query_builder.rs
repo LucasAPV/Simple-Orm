@@ -4,21 +4,26 @@ use crate::types::Types;
 pub struct Query{
    query: String
 }
-
+#[allow(dead_code)]
 impl Query {
    pub fn initialize_query() -> Self{
       Self { query: String::new() }
+   }
+
+   pub fn append_add_table(&mut self, table_name: String){
+      let res = format!("CREATE TABLE {table_name} (id INT)");
+      self.query.push_str(&res);
    }
    
    pub fn show_query(&self) -> &String{
       &self.query
    }
-
+   
    pub fn append_select_table_name(&mut self, table_name: String){
       let res =format!("SELECT {} FROM INFORMATION_SCHEMA.TABLES;\n", table_name);
       self.query.push_str(&res);
    }
-
+   
    pub fn append_select_table_columns(&mut self, table_name: String){
       let res = format!("SELECT * FROM {};\n", table_name);
       self.query.push_str(&res);
@@ -36,7 +41,7 @@ impl Query {
          );
       self.query.push_str(&res);
    }
-
+   
    pub fn append_select(&mut self, data: Option<Types> ,table_name: String){
       let res = match data {
          Some(d) => {
@@ -54,7 +59,7 @@ impl Query {
       };
       self.query.push_str(&res);
    }
-
+   
    pub fn append_find_by_id(&mut self, col_name: String, id: usize){
       let res = format!(
             "SELECT * FROM {} WHERE {}.id = {};\n", 
@@ -63,7 +68,7 @@ impl Query {
       
       self.query.push_str(&res);
    }
-
+   
    pub fn append_delete_column(&mut self, table_name: String, col_name: String){
       let res = format!(
          "ALTER TABLE {} DROP COLUMN {};\n", 
@@ -72,7 +77,7 @@ impl Query {
 
       self.query.push_str(&res);
    }
-
+   
    pub fn append_delete_column_data(&mut self, col_name: String, data: Types){
       let res = format!(
             "DELETE FROM {} WHERE {:?} == {:?};\n", 
@@ -80,7 +85,7 @@ impl Query {
          );
       self.query.push_str(&res);
    }
-
+   
    pub fn append_join_table(
       &mut self, col_a_name: String, col_b_name: String, 
       table_a_name: String, table_b_name: String,
