@@ -20,30 +20,43 @@ impl Migration{
       let db_pass = env.data_base_password.clone();
       let db_port = env.data_base_port.clone();
       let us_name: String = env.us_name.clone();
-      let conn = format!("mysql://{}:{}@{}/{}", us_name ,db_pass, db_port, db_name);
-      
-      println!(
-         "DADOS:\n 
-         \t db_name: {db_name}\n
-         \t db_pass: {db_pass}\n
-         \t db_port: {db_port}\n
-         \t conn: {conn}"
-      );
+      let conn = format!("mysql://{}:{}@{}/{}?multi_statements=true", us_name ,db_pass, db_port, db_name);
 
-      println!("Criando a pool");
       let pool = MySqlPoolOptions::new()
                .max_connections(5)
                .connect(conn.as_str()).await?;
-      println!("Saindo da criacao a pool");
       self.pool = Some(pool);
       Ok(())
    }
 
    pub async fn query(&self) -> Result<(), sqlx::Error>{
-      let pool = &self.pool.as_ref().expect("ERROR");
+      let pool = &self.pool.as_ref().expect("ERROR").to_owned();
       let query = &self.query.show_query();
 
-      sqlx::query(query).execute( pool.to_owned()).await?;
+      let db_name = &self.environment.data_base_name;
+      if query.contains("CREATE TABLE"){
+         let table_name= extract_table_name(&self.query.show_query());
+
+         sqlx::raw_sql(&format!("CREATE DATABASE IF NOT EXISTS `{}`", db_name))
+            .execute(pool).await?;
+         
+         sqlx::raw_sql(&format!("USE `{}`", db_name))
+            .execute(pool).await?;
+         
+         sqlx::raw_sql(&format!("DROP TABLE IF EXISTS `{}`", table_name))
+            .execute(pool).await?;
+      }
+
+      sqlx::raw_sql(query).execute(pool).await?;
       Ok(())
    }
+}
+
+fn extract_table_name(query: &str) -> String {
+   query.split_whitespace()
+      .skip_while(|s| s.to_uppercase() != "TABLE")
+      .nth(1)
+      .unwrap_or("")
+      .trim_end_matches('(')
+      .to_string()
 }

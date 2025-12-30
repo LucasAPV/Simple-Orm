@@ -11,7 +11,7 @@ impl Query {
    }
 
    pub fn append_add_table(&mut self, table_name: String){
-      let res = format!("CREATE TABLE {table_name} (id INT)");
+      let res = format!("CREATE TABLE {table_name} (id INT);\n");
       self.query.push_str(&res);
    }
    
@@ -29,17 +29,23 @@ impl Query {
       self.query.push_str(&res);
    }
 
-   pub fn append_add_column(&mut self, table_name: String, col_name: String){
-      let res = format!("ALTER TABLE {} ADD {};\n", table_name, col_name);
-      self.query.push_str(&res);
+   pub fn append_add_column(&mut self, table_name: String, col_name: String, col_type: Types) {
+      if let Some(sql_type) = col_type.get_type_name(){
+         let res = 
+            format!("ALTER TABLE `{}` ADD `{}` {};\n", table_name, col_name, sql_type);
+         self.query.push_str(&res);
+      };
    }
 
    pub fn append_add_data_to_column(&mut self, table_name: String, col_name: String, data: Types){
-      let res = format!(
-            "INSERT INTO {} ({}) VALUES ({:?});\n", 
-            table_name, col_name, data
-         );
-      self.query.push_str(&res);
+      if let Some(sql_data) = data.get_content() {
+         let res = format!(
+               "INSERT INTO {} ({}) VALUES ({:?});\n", 
+               table_name, col_name, sql_data
+            );
+         println!("{res}");
+         self.query.push_str(&res);
+      }
    }
    
    pub fn append_select(&mut self, data: Option<Types> ,table_name: String){

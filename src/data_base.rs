@@ -1,7 +1,7 @@
 use std::mem::discriminant;
 use crate::blueprint::BluePrint;
 use crate::errors::Errors;
-use crate::types::{Types, get_type_name};
+use crate::types::{Types};
 use crate::query_builder::Query;
 #[derive(Clone, Debug, PartialEq)]
 pub struct Column {
@@ -18,13 +18,13 @@ pub struct Table{
 
 impl BluePrint for Table {
    fn create(table_name: String) -> Self {
-   let mut query = Query::initialize_query();
-   query.append_add_table(table_name.clone());
-      Self {
-         table_name,
-         cols: Vec::new(),
-         query: query
-      }
+      let mut query = Query::initialize_query();
+      query.append_add_table(table_name.clone());
+         Self {
+            table_name,
+            cols: Vec::new(),
+            query: query
+         }
    }
 
    fn get_query(&self) -> Result<Query, Errors>{
@@ -49,7 +49,7 @@ impl BluePrint for Table {
       return Ok(self.cols.to_owned());
    }
 
-   fn add_column(&mut self, col_name: String) -> Result<String, Errors> {
+   fn add_column(&mut self, col_name: String, col_type: Types) -> Result<String, Errors> {
       if self.table_name.is_empty() {
          let error = format!("ERROR: TABLE NOT FOUND");
          return Err(Errors::TableNotFound(error));
@@ -57,7 +57,7 @@ impl BluePrint for Table {
       let col = Column { name: col_name.clone(), values: Vec::new() };
       let success = format!("{} IS CREATED", col.name);
       self.cols.push(col);
-      self.query.append_add_column(self.table_name.clone(), col_name);
+      self.query.append_add_column(self.table_name.clone(), col_name, col_type);
       Ok(success)
    }
 
@@ -91,8 +91,8 @@ impl BluePrint for Table {
 
          return Ok(success);      
       } else {
-         let expected_type = get_type_name(&column.values[0]);
-         let received_type = get_type_name(&data);
+         let expected_type = &column.values[0].get_type_name().unwrap();
+         let received_type = &data.get_type_name().unwrap();
          Err(Errors::TypeNotEqual(format!(
                "ERROR: COLUMN {} ACCEPTS {}, TRIED TO PUSH {}",
                col_name, expected_type, received_type
@@ -198,8 +198,8 @@ impl BluePrint for Table {
 
          Ok(format!("{:?} REMOVED FROM {} COLUMN", data, col_name))
       } else {
-         let expected_type = get_type_name(&column.values[0]);
-         let received_type = get_type_name(&data);
+         let expected_type = &column.values[0].get_type_name().unwrap();
+         let received_type = &data.get_type_name().unwrap();
          Err(Errors::TypeNotEqual(format!(
                "ERROR: COLUMN {} ACCEPTS {}, TRIED TO PUSH {}",
                col_name, expected_type, received_type
