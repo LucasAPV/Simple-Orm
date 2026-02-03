@@ -20,11 +20,11 @@ async fn main() -> Result<(), sqlx::Error> {
     let clients_query = clients.get_query().unwrap();
     let products_query = products.get_query().unwrap();
 
-    let db_type = String::from("MySQL");
-    let db_port = String::from("127.0.0.1:3306");
-    let us_name = String::from("root");
-    let db_pass = String::from("root");
-    let db_name = String::from("test");
+    // let db_type = String::from("MySQL");
+    // let db_port = String::from("db_port");
+    // let us_name = String::from("db_name");
+    // let db_pass = String::from("db_pass");
+    // let db_name = String::from("test");
 
     let env = create_env(db_type, db_port, db_name, db_pass, us_name);
 
